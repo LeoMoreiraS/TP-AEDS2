@@ -8,13 +8,14 @@
 
 class Node {
 public:
-        bool isLeaf;
-        Node* left;
-        int leftId;
-        Node* middle;
-        int rightId;
-        Node* right;
-        int size;
+    bool isLeaf;
+    Node *left;
+    int leftId;
+    Node *middle;
+    int rightId;
+    Node *right;
+    int size;
+    Node();
 };
 
 

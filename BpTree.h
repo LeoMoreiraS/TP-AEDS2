@@ -9,11 +9,14 @@
 #include "Node.h"
 
 class BpTree {
+    void insertInternal(int x, Node *cursor, Node *child);
 public:
     int search(int index);
     Node *root;
     void insert(int x);
     void print(Node *cursor);
+
+    Node *findParent(Node *cursor, Node *child);
 };
 
 

@@ -38,13 +38,13 @@ void BpTree::print(Node *cursor) {
     if (cursor != nullptr) {
         std::cout << cursor->leftId << " " << cursor->rightId << " ";
         if(!cursor->isLeaf) {
-            std::cout << "( < ";
+            std::cout << " |( < ";
             print(cursor->left);
-            std::cout << ") (- ";
+            std::cout << ") (= ";
             print(cursor->middle);
             std::cout << ") ( > ";
             print(cursor->right);
-            std::cout << ")"<< std::endl;
+            std::cout << ")| " ;
         }
     }
 }
@@ -52,7 +52,7 @@ void BpTree::print(Node *cursor) {
 void BpTree::insert(int x) {
     if (root == nullptr) {
         root = new Node;
-        root->isLeaf = true;
+
         root->rightId = x;
         root->size = 1;
     } else {
@@ -60,59 +60,153 @@ void BpTree::insert(int x) {
         Node *parent;
         while (!cursor->isLeaf) {
             parent = cursor;
-            if(cursor->leftId > x){
-                cursor = cursor->left;
-            }else if(cursor->rightId < x){
+            if(cursor->rightId < x){
                 cursor = cursor->right;
+            }else if(cursor->leftId > x){
+                cursor = cursor->left;
             }else{
                 cursor = cursor->middle;
             }
         }
+        // inserção nos nós da folha
         if (cursor->size < 2) {
             if(cursor->leftId == 0 && cursor->rightId == 0 ){
-                cursor = cursor->left;
+                cursor->rightId = x;
             }else if(cursor->rightId < x){
-                cursor = cursor->right;
+                cursor->leftId = cursor->rightId;
+                cursor->rightId = x;
+            }else{
+                cursor->leftId = x;
             }
+            cursor->size++;
+        }else { // caso a folha esteja cheia inserir na folha e rebalancear a arvore SPLIT
+            Node *newNode = new Node;
+            Node *split = new Node;
+            newNode->isLeaf = false;
+            newNode->size = 1;
+            //se o maior nó da folha for menor que o valor a ser inserido
+            if(x > cursor->rightId){
+                //meio == cursor->rightId
+                newNode->rightId = cursor->rightId;
+                newNode->middle = cursor;
+                split->rightId = x;
+                split->size = 1;
+                newNode->right = split;
+                newNode->left = new Node;
+            }else if(x < cursor->leftId){
+                //meio == cursor->leftId
+                newNode->rightId = cursor->leftId;
+                newNode->middle = split;
+                split->rightId = x;
+                split->size = 1;
+                newNode->right = cursor;
+                newNode->left = new Node;
+            }else{
+                //meio == x
+                newNode->rightId = x;
+
+                split->rightId = cursor->leftId;
+                split->size = 1;
+                cursor->leftId = x;
+                newNode->middle = split;
+                newNode->right = cursor;
+                newNode->left = new Node;
+            }
+
+            if (cursor == root) {
+                root = newNode;
+            } else {
+                insertInternal(x, parent, newNode);
+            }
+        }
+    }
+}
+
+void BpTree::insertInternal(int x, Node *cursor, Node *child) {
+    // If we doesn't have overflow
+    if (cursor->size < 2) {
+
+        if(cursor->leftId == 0 && cursor->rightId >x){
             cursor->leftId = x;
             cursor->size++;
+            cursor->left = child;
+        }else if(cursor->rightId <x){
+            cursor->leftId = cursor->rightId;
+            cursor->left = cursor->middle;
+            cursor->middle = child->middle;
+            cursor->right = child->right;
+            cursor->rightId = x;
+            cursor->size++;
         }
-//        else {
-//            Node *newLeaf = new Node;
-//            int virtualNode[MAX + 1];
-//            for (int i = 0; i < MAX; i++) {
-//                virtualNode[i] = cursor->key[i];
-//            }
-//            int i = 0, j;
-//            while (x > virtualNode[i] && i < MAX)
-//                i++;
-//            for (int j = MAX + 1; j > i; j--) {
-//                virtualNode[j] = virtualNode[j - 1];
-//            }
-//            virtualNode[i] = x;
-//            newLeaf->IS_LEAF = true;
-//            cursor->size = (MAX + 1) / 2;
-//            newLeaf->size = MAX + 1 - (MAX + 1) / 2;
-//            cursor->ptr[cursor->size] = newLeaf;
-//            newLeaf->ptr[newLeaf->size] = cursor->ptr[MAX];
-//            cursor->ptr[MAX] = NULL;
-//            for (i = 0; i < cursor->size; i++) {
-//                cursor->key[i] = virtualNode[i];
-//            }
-//            for (i = 0, j = cursor->size; i < newLeaf->size; i++, j++) {
-//                newLeaf->key[i] = virtualNode[j];
-//            }
-//            if (cursor == root) {
-//                Node *newRoot = new Node;
-//                newRoot->key[0] = newLeaf->key[0];
-//                newRoot->ptr[0] = cursor;
-//                newRoot->ptr[1] = newLeaf;
-//                newRoot->IS_LEAF = false;
-//                newRoot->size = 1;
-//                root = newRoot;
-//            } else {
-//                insertInternal(newLeaf->key[0], parent, newLeaf);
-//            }
-//        }
+
     }
+
+        // For overflow, break the node
+    else {
+        Node *newNode = new Node;
+        Node *split = new Node;
+        newNode->isLeaf = false;
+        newNode->size = 1;
+        //se o maior nó da folha for menor que o valor a ser inserido
+        if (x > cursor->rightId) {
+            //meio == cursor->rightId
+            newNode->rightId = cursor->rightId;
+            newNode->middle = cursor;
+            split->rightId = x;
+            split->size = 1;
+            newNode->right = split;
+            newNode->left = new Node;
+        } else if (x < cursor->leftId) {
+            //meio == cursor->leftId
+            newNode->rightId = cursor->leftId;
+            newNode->middle = split;
+            split->rightId = x;
+            split->size = 1;
+            newNode->right = cursor;
+            newNode->left = new Node;
+        } else {
+            //meio == x
+            newNode->rightId = x;
+
+            split->rightId = cursor->leftId;
+            split->size = 1;
+            cursor->leftId = x;
+            newNode->middle = split;
+            newNode->right = cursor;
+            newNode->left = new Node;
+        }
+
+        if (cursor == root) {
+            root = newNode;
+        } else {
+            insertInternal(x, findParent(root,cursor), newNode);
+        }
+    }
+}
+Node* BpTree::findParent(Node* cursor,
+                         Node* child)
+{
+    Node* parent;
+
+    // If cursor reaches the end of Tree
+    if (cursor->isLeaf){
+        return nullptr;
+    }
+
+    if(cursor->left == child){
+        parent = cursor->left;
+        return parent;
+    }else if(cursor->right == child){
+        parent = cursor->right;
+        return parent;
+    }else if(cursor->middle == child){
+        parent = cursor->middle;
+        return parent;
+    }else{
+        parent = findParent(cursor->right,child);
+        parent = findParent(cursor->middle,child);
+        parent = findParent(cursor->left,child);
+        return parent;
+    }
+
 }
