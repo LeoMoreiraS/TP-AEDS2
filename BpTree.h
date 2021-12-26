@@ -17,6 +17,12 @@ public:
     void print(Node *cursor);
 
     Node *findParent(Node *cursor, Node *child);
+    Node *readTree(std::string file);
+    void remove(int x);
+
+    void recWrite(Node *cursor,std::ostream &file,char direction,int fatherPos);
+
+    void *writeTree(std::string file);
 };
 
 

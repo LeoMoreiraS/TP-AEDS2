@@ -1,5 +1,6 @@
 #include <iostream>
 #include <list>
+
 #include "Node.h"
 #include "BpTree.h"
 
@@ -11,40 +12,18 @@ using namespace std;
 int main() {
 
     BpTree tree = BpTree();
-    tree.insert(1);
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(2);
-    cout << endl;
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(3);
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(4);
-    tree.print(tree.root);
+    //Node* root =tree.readTree(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\tree.txt)");
+    //tree.root = root;
 
-    cout << endl;
-    tree.insert(5);
+    for (int i = 10; i <= 100; i+=10) {
+        tree.insert(i);
+        tree.print(tree.root);
+        cout<<endl;
+    }
+    tree.writeTree(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\test.txt)");
+    tree.remove(30);
     tree.print(tree.root);
-    cout << endl;
-    tree.insert(6);
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(7);
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(8);
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(-1);
-    tree.print(tree.root);
-    cout << endl;
-    tree.insert(-2);
-    tree.print(tree.root);
-    cout << endl;
-
-
+    cout<<endl;
 
     return 0;
 }
