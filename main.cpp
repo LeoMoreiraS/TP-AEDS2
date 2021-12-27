@@ -14,7 +14,8 @@ using namespace std;
 string TREE_FILE = R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\tree.txt)";
 //arquivo para armazenar os nomes
 string NAME_FILE = R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\names.bin)";
-
+//arquivo para armazenar os espaços de registros vazios
+string EMPT_FILE = R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\removedPosition.txt)";
 // para o trabalho resolvi utilizar uma arvore m-way de tamanho 3
 // para implementação da arvore b+ onde cada no tem 3 filhos e 2 indices
 
@@ -33,7 +34,7 @@ int main() {
     cin >> op;
     //reiniciar e limpar os arquivos se não carrega os dados da memória
     bool reset = op == 1;
-    BpTree tree = BpTree(NAME_FILE,TREE_FILE,REGISTER_SIZE,reset);
+    BpTree tree = BpTree(NAME_FILE,TREE_FILE,EMPT_FILE,REGISTER_SIZE,reset);
     id = tree.getID();
     cout << endl;
 
@@ -75,6 +76,7 @@ int main() {
                 break;
             default:
                 cout << "Opção invalida" << endl;
+                break;
         }
         cout << endl;
 

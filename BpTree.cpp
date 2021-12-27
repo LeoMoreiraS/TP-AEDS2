@@ -144,16 +144,31 @@ void BpTree::insert(int x,char *name) {
         }
     }
     //abre o arquivo de nomes
-    std::ofstream namesW(nameFile, std::ios::app | std::ios::out | std::ios::binary);
-    //se aberto busca o final do arquivo
-    namesW.seekp(0,std::ios::end);
-    //salva o endereço onde vai ser inserido o novo registro
-    int address = (int)namesW.tellp();
-    //insere o novo registro no arquivo
-    namesW.write(name, regSize*sizeof(char));
-    //salva o endereço do arquivo no ponteiro relativo ao id da arvore
-    ptr[x]=address;
-    namesW.close();
+    int regAddress = checkEmptyRegister();
+    if(regAddress == -1){
+        std::ofstream namesW(nameFile, std::ios::app | std::ios::out | std::ios::binary);
+        //se aberto busca o final do arquivo
+        namesW.seekp(0,std::ios::end);
+        //salva o endereço onde vai ser inserido o novo registro
+        int address = (int)namesW.tellp();
+        //insere o novo registro no arquivo
+        namesW.write(name, regSize*sizeof(char));
+        //salva o endereço do arquivo no ponteiro relativo ao id da arvore
+        ptr[x]=address;
+        namesW.close();
+    }else{
+        //abre o arquivo em função leitura escirta para posicionar e escrever o registro caso exista um registro vazio
+        std::fstream namesWR(nameFile, std::ios_base::binary | std::ios_base::out | std::ios_base::in);
+        //busca o endereço a ser removido
+        if(namesWR.is_open()){
+            namesWR.seekp(regAddress,std::ios_base::beg);
+            int add = (int)namesWR.tellp();
+            namesWR.write(name, sizeof(char)*regSize);
+            namesWR.close();
+            ptr[x]=add;
+        }
+    }
+
     //reescreve a arvore no arquivo
     writeTree(treeFile);
 }
@@ -278,8 +293,12 @@ void BpTree::remove(int x) {
             int add = namesW.tellp();
             namesW.write("               ", sizeof(char)*regSize);
             namesW.close();
+            //adiciona o endereço nos arquivos de registro vazio
+            emptyReg.push_back(add);
+            writeEmptyRegister();
         }
         ptr[x] = -1;
+
         if (cursor == root) {
 
             if (cursor->size == 0) {
@@ -592,7 +611,7 @@ void *BpTree::writeTree(std::string file) {
     treeFile.close();
 }
 
-BpTree::BpTree(std::string nameFile, std::string treeFile, int regSize,bool reset) : nameFile(std::move(nameFile)), treeFile(std::move(treeFile)),  regSize(regSize){
+BpTree::BpTree(std::string nameFile, std::string treeFile, std::string emptyFile, int regSize,bool reset) : nameFile(std::move(nameFile)), treeFile(std::move(treeFile)), emptyFile(std::move(emptyFile)),  regSize(regSize){
     if(reset){
         //caso o argumento reset seja passado como true a arvore é reiniciada e os arquivos são limpos
         std::ofstream clearTree(this->treeFile);
@@ -609,10 +628,20 @@ BpTree::BpTree(std::string nameFile, std::string treeFile, int regSize,bool rese
         }else{
             std::cout<< "Erro ao abrir o arquivo de nomes" << std::endl;
         }
+        std::ofstream clearEmpty(this->emptyFile);
+        if(clearEmpty.is_open()){
+            clearEmpty << 0 << std::endl;
+            std::cout<< "Os registros vazios foram resetados" << std::endl;
+
+            clearEmpty.close();
+        }else{
+            std::cout<< "Erro ao abrir o arquivo de registros vazios" << std::endl;
+        }
         root = new Node;
     }else{
         //se não a arvore é carregada para memória principal
         this->root = readTree(this->treeFile);
+        loadEmptyRegister();
     }
 }
 
@@ -622,4 +651,46 @@ int BpTree::getID() {
         cursor = cursor->right;
     }
     return cursor->rightId +10;
+}
+
+int BpTree::checkEmptyRegister() {
+    if(emptyReg.size() > 0){
+        std::ofstream emptyF(emptyFile);
+        if(emptyF.is_open()) {
+            emptyF << emptyReg.size() - 1 << std::endl;
+            for (int i = 1; i < emptyReg.size(); i++) {
+                emptyF << emptyReg[i] << std::endl;
+            }
+            emptyF.close();
+            int regAddres = emptyReg[0];
+            emptyReg.erase(emptyReg.begin());
+            return regAddres;
+        }
+    }else{
+        return -1;
+    }
+}
+
+void BpTree::loadEmptyRegister() {
+    std::ifstream emptyF(emptyFile);
+    std::string line;
+    if(emptyF.is_open()) {
+        getline(emptyF,line);
+        int size = std::stoi(line);
+        for (int i = 0; i< size; i++){
+            getline(emptyF,line);
+            emptyReg.push_back(std::stoi(line));
+        }
+        emptyF.close();
+    }
+}
+void BpTree::writeEmptyRegister() {
+    std::ofstream emptyF(emptyFile);
+    if(emptyF.is_open()) {
+        emptyF << emptyReg.size() << std::endl;
+        for (int i : emptyReg) {
+            emptyF << i << std::endl;
+        }
+        emptyF.close();
+    }
 }

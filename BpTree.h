@@ -8,17 +8,20 @@
 
 #include "Node.h"
 #include <map>
+#include <vector>
 class BpTree {
 
 
     void insertInternal(int x, Node *cursor, Node *child);
     std::map <int,int> ptr;
+    std::vector<int> emptyReg;
 public:
-    BpTree(std::string nameFile, std::string treeFile, int regSize,bool reset);
+    BpTree(std::string nameFile, std::string treeFile,std::string emptyFile, int regSize,bool reset);
 
 private:
     int regSize;
     std::string nameFile;
+    std::string emptyFile;
     std::string treeFile;
 public:
     int getID();
@@ -26,7 +29,7 @@ public:
     Node *root{};
     void insert(int x,char *name);
     void print(Node *cursor);
-
+    int checkEmptyRegister();
     Node *findParent(Node *cursor, Node *child);
     Node *readTree(std::string file);
     void remove(int x);
@@ -34,6 +37,10 @@ public:
     void recWrite(Node *cursor,std::ostream &file,char direction,int fatherPos);
 
     void *writeTree(std::string file);
+
+    void loadEmptyRegister();
+
+    void writeEmptyRegister();
 };
 
 
