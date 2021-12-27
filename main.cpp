@@ -5,50 +5,80 @@
 #include <cstring>
 #include "Node.h"
 #include "BpTree.h"
-#include <stdio.h>
+#include <cstdio>
 
 using namespace std;
+#define REGISTER_SIZE 15
+
+//arquivo para armazenar os indices da arvore
+string TREE_FILE = R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\tree.txt)";
+//arquivo para armazenar os nomes
+string NAME_FILE = R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\names.bin)";
 
 // para o trabalho resolvi utilizar uma arvore m-way de tamanho 3
 // para implementação da arvore b+ onde cada no tem 3 filhos e 2 indices
 
+
+void menu(){
+    cout << "Inserir um novo registro (1)" << endl;
+    cout << " Encontrar um registro (2)" << endl;
+    cout << "  Remover um registro (3)" << endl;
+    cout << "   Imprimir A arvore (4)" << endl;
+    cout << "         Sair (0)       " << endl;
+}
 int main() {
+    int op,address,x,id;
+    char name[REGISTER_SIZE];
+    cout << "Manter arquivos (0)" << endl << "Reiniciar arquivos (1)" << endl;
+    cin >> op;
+    //reiniciar e limpar os arquivos se não carrega os dados da memória
+    bool reset = op == 1;
+    BpTree tree = BpTree(NAME_FILE,TREE_FILE,REGISTER_SIZE,reset);
+    id = tree.getID();
+    cout << endl;
 
-    BpTree tree = BpTree();
-    Node* root =tree.readTree(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\tree.txt)");
-    tree.root = root;
-    ofstream namesW(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\names.bin)", ios::out | ios::binary);
+    system("pause");
+    cout << string(50, '\n');
+    while(true){
+         menu();
+         cin >> op;
+        switch (op) {
+            case 0:
+                return 0;
+            case 1:
+                cout << "Digite um nome" << endl;
+                cin.clear();
+                fflush(stdin);
+                cin.get(name,REGISTER_SIZE,'\n');
+                tree.insert(id,name);
+                tree.print(tree.root);
+                cout << endl <<"Registro adicionado : ID(" << id << ") Nome: " << name;
+                id+=10;
+                break;
+            case 2:
+                cout << "Digite um id para buscar um registro" << endl;
+                cin >> x;
+                address = tree.search(x);
+                if(address != -1){
+                    cout << "Endereco do registro : " << address << endl;
+                }
+                break;
+            case 3:
+                cout << "Digite um id para remover um registro" << endl;
+                cin >> x;
+                tree.remove(x);
+                tree.writeTree(TREE_FILE);
+                break;
+            case 4:
+                cout << "root ";
+                tree.print(tree.root);
+                break;
+            default:
+                cout << "Opção invalida" << endl;
+        }
+        cout << endl;
 
-    char name[15];
-    int a = 0;
-
-
-//    for (int i = 10; i <= 50; i+=10) {
-//        cout << "Digite um nome" << endl;
-//        cin.clear();
-//        fflush(stdin);
-//        cin.get(name,15,'\n');
-//        namesW.seekp(0,ios::end);
-//        a = (int)namesW.tellp();
-//        namesW.write(name, 15*sizeof(char));
-//        tree.insert(i,a);
-//        tree.writeTree(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\test.txt)");
-//        tree.print(tree.root);
-//        cout<<endl;
-//    }
-
-    namesW.close();
-    tree.remove(30);
-    int pos = tree.search(50);
-    ifstream namesR(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\names.bin)", ios::in | ios::binary);
-    namesR.seekg(pos,ios::beg);
-    namesR.read(name,15*sizeof(char));
-    cout << name << endl;
-    tree.writeTree(R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\test.txt)");
-
-    tree.print(tree.root);
-    cout<<endl;
-
-
-    return 0;
+        system("pause");
+        cout << string(50, '\n');
+    }
 }

@@ -9,12 +9,22 @@
 #include "Node.h"
 #include <map>
 class BpTree {
+
+
     void insertInternal(int x, Node *cursor, Node *child);
     std::map <int,int> ptr;
 public:
+    BpTree(std::string nameFile, std::string treeFile, int regSize,bool reset);
+
+private:
+    int regSize;
+    std::string nameFile;
+    std::string treeFile;
+public:
+    int getID();
     int search(int index);
-    Node *root;
-    void insert(int x,int address);
+    Node *root{};
+    void insert(int x,char *name);
     void print(Node *cursor);
 
     Node *findParent(Node *cursor, Node *child);

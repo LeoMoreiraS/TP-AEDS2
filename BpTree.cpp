@@ -5,9 +5,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <utility>
 #include <vector>
 #include <algorithm>
 #include <map>
+#include <cstring>
 #include "BpTree.h"
 #include "Node.h"
 
@@ -20,6 +22,7 @@ int BpTree::search(int index) {
         return -1;
     } else {
         Node *cursor = root;
+        //busca o id até chegar na folha
         while (!cursor->isLeaf) {
             if(cursor->leftId >= index){
                 cursor = cursor->left;
@@ -29,34 +32,46 @@ int BpTree::search(int index) {
                 cursor = cursor->middle;
             }
         }
-        if(cursor->rightId == index){
-            return ptr[index];
-        }else if(cursor->leftId == index ){
+        //caso encontre na folha ele verifica se existe na esquerda ou direita imprime seu conteudo do arquivo e retorna seu ponteiro
+        if(cursor->rightId == index||cursor->leftId == index ){
+            //abre o arquivo em modo leitura e imprime os dados do arquivo
+            std::ifstream namesR(nameFile, std::ios::in | std::ios::binary);
+            namesR.seekg(ptr[index],std::ios::beg);
+            char *name = (char *)(malloc(regSize * sizeof(char)));
+            if(namesR.is_open()){
+                namesR.read(name,regSize*sizeof(char));
+                std::cout << name << std::endl;
+            }else{
+                std::cout << "File can't be open" << std::endl;
+            }
+            namesR.close();
             return ptr[index];
         }else{
-            std::cout << "Not found\n";
+            std::cout << "Not found" << std::endl;
             return -1;
         }
     }
 }
 void BpTree::print(Node *cursor) {
     if (cursor != nullptr) {
-        std::cout << cursor->leftId << " " << cursor->rightId << " ";
         if(!cursor->isLeaf) {
+            std::cout << cursor->leftId << " " << cursor->rightId << " ";
             std::cout << " ( < ";
             print(cursor->left);
-            std::cout << ") (= ";
+            std::cout << " = ";
             print(cursor->middle);
-            std::cout << ") ( > ";
+            std::cout << "  > ";
             print(cursor->right);
             std::cout << ") " ;
         }else{
-            std::cout << "|" ;
+            int lptr = cursor->leftId != 0?ptr[cursor->leftId]: 0;
+            int rptr = cursor->rightId != 0?ptr[cursor->rightId]: 0;
+            std::cout  << " key: " << cursor->leftId << "ptr: " << lptr  << " " << "key: " << cursor->rightId << "ptr: " << rptr  << "->";
         }
     }
 }
 
-void BpTree::insert(int x,int address) {
+void BpTree::insert(int x,char *name) {
     if (root == nullptr) {
         root = new Node;
 
@@ -128,7 +143,19 @@ void BpTree::insert(int x,int address) {
             }
         }
     }
+    //abre o arquivo de nomes
+    std::ofstream namesW(nameFile, std::ios::app | std::ios::out | std::ios::binary);
+    //se aberto busca o final do arquivo
+    namesW.seekp(0,std::ios::end);
+    //salva o endereço onde vai ser inserido o novo registro
+    int address = (int)namesW.tellp();
+    //insere o novo registro no arquivo
+    namesW.write(name, regSize*sizeof(char));
+    //salva o endereço do arquivo no ponteiro relativo ao id da arvore
     ptr[x]=address;
+    namesW.close();
+    //reescreve a arvore no arquivo
+    writeTree(treeFile);
 }
 
 void BpTree::insertInternal(int x, Node *cursor, Node *child) {
@@ -242,6 +269,17 @@ void BpTree::remove(int x) {
             return;
         }
         cursor->size--;
+        int address = ptr[x];
+        //abre o arquivo em função leitura escirta para posicionar e apagar o registro removido
+        std::fstream namesW(nameFile, std::ios_base::binary | std::ios_base::out | std::ios_base::in);
+        //busca o endereço a ser removido
+        if(namesW.is_open()){
+            namesW.seekp(address,std::ios_base::beg);
+            int add = namesW.tellp();
+            namesW.write("               ", sizeof(char)*regSize);
+            namesW.close();
+        }
+        ptr[x] = -1;
         if (cursor == root) {
 
             if (cursor->size == 0) {
@@ -251,13 +289,13 @@ void BpTree::remove(int x) {
             }
             return;
         }
-//        cursor->ptr[cursor->size] = cursor->ptr[cursor->size + 1];
-//        cursor->ptr[cursor->size + 1] = NULL;
-//        if (cursor->size >= (MAX + 1) / 2) {
-//            return;
-//        }
-//        if (leftSibling >= 0) {
-//            Node *leftNode = parent->ptr[leftSibling];
+
+        if (cursor->size != 0) {
+            return;
+        }
+
+        if (pos==0) {
+//            Node *leftNode = parent->left;
 //            if (leftNode->size >= (MAX + 1) / 2 + 1) {
 //                for (int i = cursor->size; i > 0; i--) {
 //                    cursor->key[i] = cursor->key[i - 1];
@@ -272,7 +310,7 @@ void BpTree::remove(int x) {
 //                parent->key[leftSibling] = cursor->key[0];
 //                return;
 //            }
-//        }
+        }
 //        if (rightSibling <= parent->size) {
 //            Node *rightNode = parent->ptr[rightSibling];
 //            if (rightNode->size >= (MAX + 1) / 2 + 1) {
@@ -459,12 +497,12 @@ Node *BpTree::readTree(std::string file) {
     if(treeFile.is_open()){
         while(!treeFile.eof()){
             int pos = treeFile.tellg();
-            std::cout << "pos: "<<pos << std::endl;
-            getline(treeFile,line);
-            std::cout << "line size " << line.size()<<std::endl;
-            std::cout << "line: "+line << std::endl;
 
-            for(int i = 0;i<6;i++) {
+            getline(treeFile,line);
+            if(line.size()<5){
+                break;
+            }
+            for(int i = 0;i<=7;i++) {
                 data = line.substr(0, line.find(delimiter));
                 line = line.substr(line.find(delimiter) + 1);
                 switch (i) {
@@ -487,6 +525,16 @@ Node *BpTree::readTree(std::string file) {
                         fatherPos = stoi(data);
                         break;
                     case 5:
+                        if(cursor->isLeaf && cursor->leftId != 0){
+                            ptr[cursor->leftId] = stoi(data);
+                        }
+                        break;
+                    case 6:
+                        if(cursor->isLeaf && cursor->rightId != 0){
+                            ptr[cursor->rightId] = stoi(data);
+                        }
+                        break;
+                    case 7:
                         if(data == "<"){
                             ft[fatherPos]->left = cursor;
                         }else if(data == ">"){
@@ -516,11 +564,14 @@ Node *BpTree::readTree(std::string file) {
 
 void BpTree::recWrite(Node *cursor,std::ostream &file,char direction,int fatherPos){
     std::string isLeaf;
-    std::cout << (file.tellp()) << std::endl;
+    int lptr=0;
+    int rptr=0;
     if (cursor != nullptr) {
         int pos = file.tellp();
         isLeaf = cursor->isLeaf?"true":"false";
-        file << isLeaf << '|' <<cursor->leftId << '|' << cursor->rightId << '|' << cursor->size << '|' << fatherPos << '|' << direction << std::endl;
+        lptr = cursor->isLeaf?ptr[cursor->leftId]:0;
+        rptr = cursor->isLeaf?ptr[cursor->rightId]:0;
+        file << isLeaf << '|' <<cursor->leftId << '|' << cursor->rightId << '|' << cursor->size << '|' << fatherPos << '|'<<  lptr << '|'<< rptr << '|' << direction << std::endl;
         if(!cursor->isLeaf) {
             recWrite(cursor->left,file,'<',pos);
             recWrite(cursor->middle,file,'=',pos);
@@ -539,4 +590,36 @@ void *BpTree::writeTree(std::string file) {
     }
 
     treeFile.close();
+}
+
+BpTree::BpTree(std::string nameFile, std::string treeFile, int regSize,bool reset) : nameFile(std::move(nameFile)), treeFile(std::move(treeFile)),  regSize(regSize){
+    if(reset){
+        //caso o argumento reset seja passado como true a arvore é reiniciada e os arquivos são limpos
+        std::ofstream clearTree(this->treeFile);
+        if(clearTree.is_open()){
+            std::cout<< "A arvore foi resetada" << std::endl;
+            clearTree.close();
+        }else{
+            std::cout<< "Erro ao abrir o arquivo da arvore" << std::endl;
+        }
+        std::ofstream clearNames(this->nameFile);
+        if(clearNames.is_open()){
+            std::cout<< "Os nomes foram resetados" << std::endl;
+            clearNames.close();
+        }else{
+            std::cout<< "Erro ao abrir o arquivo de nomes" << std::endl;
+        }
+        root = new Node;
+    }else{
+        //se não a arvore é carregada para memória principal
+        this->root = readTree(this->treeFile);
+    }
+}
+
+int BpTree::getID() {
+    Node *cursor = root;
+    while(!cursor->isLeaf){
+        cursor = cursor->right;
+    }
+    return cursor->rightId +10;
 }
