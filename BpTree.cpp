@@ -7,11 +7,12 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <map>
 #include "BpTree.h"
 #include "Node.h"
 
 
-void insert(int x);
+
 
 int BpTree::search(int index) {
     if (root == nullptr) {
@@ -29,9 +30,9 @@ int BpTree::search(int index) {
             }
         }
         if(cursor->rightId == index){
-            return index;
+            return ptr[index];
         }else if(cursor->leftId == index ){
-            return index;
+            return ptr[index];
         }else{
             std::cout << "Not found\n";
             return -1;
@@ -55,7 +56,7 @@ void BpTree::print(Node *cursor) {
     }
 }
 
-void BpTree::insert(int x) {
+void BpTree::insert(int x,int address) {
     if (root == nullptr) {
         root = new Node;
 
@@ -127,6 +128,7 @@ void BpTree::insert(int x) {
             }
         }
     }
+    ptr[x]=address;
 }
 
 void BpTree::insertInternal(int x, Node *cursor, Node *child) {
@@ -446,6 +448,7 @@ Node *BpTree::readTree(std::string file) {
     Node *root = new Node;
     std::vector<int>::iterator itr;
     Node *cursor = root;
+    std::map<int,Node*> ft;
     std::vector<Node*> fathers;
     std::vector<int> fatherPosition;
     int fatherPos = 0;
@@ -468,8 +471,7 @@ Node *BpTree::readTree(std::string file) {
                     case 0:
                         cursor->isLeaf = data == "true";
                         if(!cursor->isLeaf){
-                            fathers.insert(fathers.begin()+fathers.size(),cursor);
-                            fatherPosition.insert(fatherPosition.begin()+fatherPosition.size(),pos+a);
+                            ft[pos+a]=cursor;
                         }
                         break;
                     case 1:
@@ -485,20 +487,12 @@ Node *BpTree::readTree(std::string file) {
                         fatherPos = stoi(data);
                         break;
                     case 5:
-                        //percorre o vetor de positions procurando o index do father
-                        itr = std::find(fatherPosition.begin(), fatherPosition.end(), fatherPos);
-                        if (itr != fatherPosition.cend()) {
-                            fatherPos = std::distance(fatherPosition.begin(), itr);
-                        }
-                        else {
-                            std::cout << "Element not found";
-                        }
                         if(data == "<"){
-                            fathers[fatherPos]->left = cursor;
+                            ft[fatherPos]->left = cursor;
                         }else if(data == ">"){
-                            fathers[fatherPos]->right = cursor;
+                            ft[fatherPos]->right = cursor;
                         }else if(data == "="){
-                            fathers[fatherPos]->middle = cursor;
+                            ft[fatherPos]->middle = cursor;
                         }
                         break;
                     default:

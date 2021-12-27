@@ -7,13 +7,14 @@
 
 
 #include "Node.h"
-
+#include <map>
 class BpTree {
     void insertInternal(int x, Node *cursor, Node *child);
+    std::map <int,int> ptr;
 public:
     int search(int index);
     Node *root;
-    void insert(int x);
+    void insert(int x,int address);
     void print(Node *cursor);
 
     Node *findParent(Node *cursor, Node *child);
