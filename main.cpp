@@ -2,13 +2,12 @@
 #include <list>
 #include <fstream>
 #include <string>
-#include <cstring>
 #include "Node.h"
 #include "BpTree.h"
 #include <cstdio>
 
 using namespace std;
-#define REGISTER_SIZE 15
+#define REGISTER_SIZE 16
 
 //arquivo para armazenar os indices da arvore
 string TREE_FILE = R"(C:\Users\leomo\Desktop\Trabalho01\bmaisarvore\tree.txt)";
@@ -68,7 +67,7 @@ int main() {
                 cout << "Digite um id para remover um registro" << endl;
                 cin >> x;
                 tree.remove(x);
-                tree.writeTree(TREE_FILE);
+                tree.writeTree();
                 break;
             case 4:
                 cout << "root ";

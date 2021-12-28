@@ -24,19 +24,19 @@ private:
     std::string emptyFile;
     std::string treeFile;
 public:
-    int getID();
+    int getID() const;
     int search(int index);
     Node *root{};
     void insert(int x,char *name);
     void print(Node *cursor);
     int checkEmptyRegister();
     Node *findParent(Node *cursor, Node *child);
-    Node *readTree(std::string file);
+    Node *readTree();
     void remove(int x);
 
     void recWrite(Node *cursor,std::ostream &file,char direction,int fatherPos);
 
-    void *writeTree(std::string file);
+    void writeTree();
 
     void loadEmptyRegister();
 
