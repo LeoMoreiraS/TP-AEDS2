@@ -5,13 +5,10 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <utility>
 #include <vector>
 #include <algorithm>
 #include <map>
-#include <cstring>
 #include "BpTree.h"
-#include "Node.h"
 
 
 
@@ -39,7 +36,7 @@ int BpTree::search(int index) {
             namesR.seekg(ptr[index],std::ios::beg);
             char *name = (char *)(malloc(regSize * sizeof(char)));
             if(namesR.is_open()){
-                namesR.read(name,regSize*sizeof(char));
+                namesR.read(name,(int)sizeof(char)*regSize);
                 std::cout << name << std::endl;
             }else{
                 std::cout << "File can't be open" << std::endl;
@@ -55,7 +52,11 @@ int BpTree::search(int index) {
 void BpTree::print(Node *cursor) {
     if (cursor != nullptr) {
         if(!cursor->isLeaf) {
-            std::cout << cursor->leftId << " " << cursor->rightId << " ";
+            if(cursor->leftId != 0 || cursor->rightId != 0){
+                std::cout << cursor->leftId << " " << cursor->rightId << " " << std::endl;
+            }
+
+
             std::cout << " ( < ";
             print(cursor->left);
             std::cout << " = ";
@@ -66,7 +67,9 @@ void BpTree::print(Node *cursor) {
         }else{
             int lptr = cursor->leftId != 0?ptr[cursor->leftId]: 0;
             int rptr = cursor->rightId != 0?ptr[cursor->rightId]: 0;
-            std::cout  << " key: " << cursor->leftId << "ptr: " << lptr  << " " << "key: " << cursor->rightId << "ptr: " << rptr  << "->";
+            if(cursor->leftId != 0 || cursor->rightId != 0){
+                std::cout  << " {key: " << cursor->leftId << " ptr: " << lptr  << "} " << "{key: " << cursor->rightId << " ptr: " << rptr  << "}->";
+            }
         }
     }
 }
@@ -82,22 +85,23 @@ void BpTree::insert(int x,char *name) {
         Node *parent;
         while (!cursor->isLeaf) {
             parent = cursor;
-            if(cursor->rightId <= x){
-                cursor = cursor->right;
-            }else if(cursor->leftId > x){
+
+            if( x < cursor->leftId ){
                 cursor = cursor->left;
-            }else{
+            }else if(cursor->rightId == 0 || x < cursor->rightId){
                 cursor = cursor->middle;
+            }else{
+                cursor = cursor->right;
             }
         }
         // inserção nos nós da folha
         if (cursor->size < 2) {
-            if(cursor->leftId == 0 && cursor->rightId == 0 ){
-                cursor->rightId = x;
-            }else if(cursor->rightId < x){
-                cursor->leftId = cursor->rightId;
+            if(cursor->size == 0){
+                cursor->leftId = x;
+            }else if( x > cursor->leftId){
                 cursor->rightId = x;
             }else{
+                cursor->rightId = cursor->leftId;
                 cursor->leftId = x;
             }
             cursor->size++;
@@ -109,13 +113,16 @@ void BpTree::insert(int x,char *name) {
             newNode->size = 1;
             //se o maior nó da folha for menor que o valor a ser inserido
             if(x > cursor->rightId){
-                //meio == cursor->rightId
-                newNode->rightId = cursor->rightId;
-                newNode->middle = cursor;
-                split->rightId = x;
+                //sobe o nó da direita e aloca um novo filho pra ele
+                //        4
+                //    /       \
+                //  1  2 ->  4  0
+                newNode->leftId = x;
+                newNode->left = cursor;
+                split->leftId = x;
                 split->size = 1;
-                newNode->right = split;
-                newNode->left = new Node;
+                newNode->middle = split;
+                newNode->right = new Node;
             }else if(x < cursor->leftId){
                 //meio == cursor->leftId
                 newNode->rightId = cursor->leftId;
@@ -127,7 +134,6 @@ void BpTree::insert(int x,char *name) {
             }else{
                 //meio == x
                 newNode->rightId = x;
-
                 split->rightId = cursor->leftId;
                 split->size = 1;
                 cursor->leftId = x;
@@ -139,7 +145,7 @@ void BpTree::insert(int x,char *name) {
             if (cursor == root) {
                 root = newNode;
             } else {
-                insertInternal(newNode->rightId, parent, newNode);
+                insertInternal(newNode->leftId, parent, newNode);
             }
         }
     }
@@ -152,7 +158,7 @@ void BpTree::insert(int x,char *name) {
         //salva o endereço onde vai ser inserido o novo registro
         int address = (int)namesW.tellp();
         //insere o novo registro no arquivo
-        namesW.write(name, regSize*sizeof(char));
+        namesW.write(name, (int)sizeof(char)*regSize);
         //salva o endereço do arquivo no ponteiro relativo ao id da arvore
         ptr[x]=address;
         namesW.close();
@@ -163,96 +169,99 @@ void BpTree::insert(int x,char *name) {
         if(namesWR.is_open()){
             namesWR.seekp(regAddress,std::ios_base::beg);
             int add = (int)namesWR.tellp();
-            namesWR.write(name, sizeof(char)*regSize);
+            namesWR.write(name, (int)sizeof(char)*regSize);
             namesWR.close();
             ptr[x]=add;
         }
     }
 
     //reescreve a arvore no arquivo
-    writeTree(treeFile);
+    writeTree();
 }
 
 void BpTree::insertInternal(int x, Node *cursor, Node *child) {
-    // If we doesn't have overflow
+    //se não tiver mais q dois filhos empurra o novo nó pra direita e sobe o id dele
     if (cursor->size < 2) {
-
-        if(cursor->leftId == 0 && cursor->rightId >x){
-            cursor->leftId = x;
-            cursor->size++;
-            cursor->left = child;
-        }else if(cursor->rightId <x){
-            cursor->leftId = cursor->rightId;
-            cursor->left = cursor->middle;
-            cursor->middle = child->middle;
-            cursor->right = child->right;
-            cursor->rightId = child->rightId;
-            cursor->size++;
-        }
-
-    }
-
-        // For overflow, break the node
-    else {
+        cursor->rightId = x;
+        cursor->size++;
+        cursor->right = child->middle;
+    }else {// For overflow, break the node
         Node *newNode = new Node;
         newNode->isLeaf = false;
         newNode->size = 1;
-        //se o maior nó da folha for menor que o valor a ser inserido
-        if (x > cursor->rightId) {
-            //meio == cursor->rightId
-            newNode->rightId = cursor->rightId;
-            newNode->middle = cursor;
-            newNode->right = child;
-            newNode->left = new Node;
-            cursor->right = new Node;
-        } else if (x < cursor->leftId) {
-            //meio == cursor->leftId
-            newNode->rightId = cursor->leftId;
-            newNode->middle = child;
-            newNode->right = cursor;
-            newNode->left = new Node;
-        } else {
-            //meio == x
-            newNode->rightId = x;
-            cursor->leftId = x;
-            newNode->middle = child;
-            newNode->right = cursor;
-            newNode->left = new Node;
-        }
-
+        Node *splitL = new Node;
+        Node *splitR = new Node;
+        splitL->size=1;
+        splitL->isLeaf = false;
+        splitL->leftId = cursor->leftId;
+        splitL->left = cursor->left;
+        splitL->middle = cursor->middle;
+        splitL->right = new Node;
+        splitR->size=1;
+        splitR->isLeaf = false;
+        splitR->leftId = x;
+        splitR->left = cursor->right;
+        splitR->middle = child->middle;
+        splitR->right = new Node;
+        newNode->leftId = cursor->rightId;
+        newNode->left = splitL;
+        newNode->middle = splitR;
+        newNode->right = new Node;
         if (cursor == root) {
             root = newNode;
+            return;
         } else {
-            insertInternal(newNode->rightId, findParent(root,cursor), newNode);
+            insertInternal(newNode->leftId, findParent(root,cursor), newNode);
+            return;
         }
+//        //se o maior nó da folha for menor que o valor a ser inserido
+//        if (x > cursor->rightId) {
+//            //meio == cursor->rightId
+//            newNode->rightId = cursor->rightId;
+//            newNode->middle = cursor;
+//            newNode->right = child;
+//            newNode->left = new Node;
+//            cursor->right = new Node;
+//        } else if (x < cursor->leftId) {
+//            //meio == cursor->leftId
+//            newNode->rightId = cursor->leftId;
+//            newNode->middle = child;
+//            newNode->right = cursor;
+//            newNode->left = new Node;
+//        } else {
+//            //meio == x
+//            newNode->rightId = x;
+//            newNode->middle = child;
+//            newNode->right = cursor;
+//            newNode->left = new Node;
+//        }
+//
+//        if (cursor == root) {
+//            root = newNode;
+//        } else {
+//            insertInternal(newNode->rightId, findParent(root,cursor), newNode);
+//        }
     }
 }
 Node* BpTree::findParent(Node* cursor,
                          Node* child)
 {
-    Node* parent;
+    Node *parent = nullptr;
 
     // If cursor reaches the end of Tree
     if (cursor->isLeaf){
         return nullptr;
     }
-
-    if(cursor->left == child){
-        parent = cursor->left;
+    //verifica se o filho bate com algum dos filhos do cursor se sim retorna o cursor
+    if(cursor->left == child || cursor->right == child || cursor->middle == child){
+        parent = cursor;
         return parent;
-    }else if(cursor->right == child){
-        parent = cursor->right;
-        return parent;
-    }else if(cursor->middle == child){
-        parent = cursor->middle;
-        return parent;
-    }else{
-        parent = findParent(cursor->right,child);
-        parent = findParent(cursor->middle,child);
-        parent = findParent(cursor->left,child);
-        return parent;
+    }else{//faz uma chamada recursiva com todos os filhos do cursor
+        findParent(cursor->right,child);
+        findParent(cursor->middle,child);
+        findParent(cursor->left,child);
     }
-
+    return parent;
 }
 
 void BpTree::remove(int x) {
@@ -261,24 +270,28 @@ void BpTree::remove(int x) {
     } else {
         Node *cursor = root;
         Node *parent;
-        int leftSibling, rightSibling;
+        int pos1=0;
         while (!cursor->isLeaf) {
             parent = cursor;
-            if(cursor->rightId <= x){
+            if(x >= cursor->rightId && cursor->rightId!=0){
+                pos1=2;
                 cursor = cursor->right;
-            }else if(cursor->leftId > x){
+            }else if(x < cursor->leftId ){
+                pos1=0;
                 cursor = cursor->left;
             }else{
+                pos1=1;
                 cursor = cursor->middle;
             }
         }
         int pos;
         if(x == cursor->leftId){
             pos = 0;
-            cursor->leftId = 0;
+            cursor->leftId = cursor->rightId;
+            cursor->rightId = 0;
         }else if(x == cursor->rightId){
             pos = 1;
-            cursor->rightId = 0;
+            cursor->leftId = 0;
         }else{
             std::cout << "Not found\n";
             return;
@@ -290,8 +303,8 @@ void BpTree::remove(int x) {
         //busca o endereço a ser removido
         if(namesW.is_open()){
             namesW.seekp(address,std::ios_base::beg);
-            int add = namesW.tellp();
-            namesW.write("               ", sizeof(char)*regSize);
+            int add = (int)namesW.tellp();
+            namesW.write("                ", (int)sizeof(char)*regSize);
             namesW.close();
             //adiciona o endereço nos arquivos de registro vazio
             emptyReg.push_back(add);
@@ -312,212 +325,127 @@ void BpTree::remove(int x) {
         if (cursor->size != 0) {
             return;
         }
+        std::cout << "MERGE" <<std::endl;
+        if (pos==1) {
+            return;
+        }else{
+            if(pos1==0){
 
-        if (pos==0) {
-//            Node *leftNode = parent->left;
-//            if (leftNode->size >= (MAX + 1) / 2 + 1) {
-//                for (int i = cursor->size; i > 0; i--) {
-//                    cursor->key[i] = cursor->key[i - 1];
-//                }
-//                cursor->size++;
-//                cursor->ptr[cursor->size] = cursor->ptr[cursor->size - 1];
-//                cursor->ptr[cursor->size - 1] = NULL;
-//                cursor->key[0] = leftNode->key[leftNode->size - 1];
-//                leftNode->size--;
-//                leftNode->ptr[leftNode->size] = cursor;
-//                leftNode->ptr[leftNode->size + 1] = NULL;
-//                parent->key[leftSibling] = cursor->key[0];
-//                return;
-//            }
+
+                if(parent->size == 2 ){//puxa o filho da direita pro meio e o meio pra esquerda
+                    parent->left = parent->middle;
+                    parent->middle = parent->right;
+                    parent->leftId = parent->rightId;
+                    parent->right = cursor;
+                    parent->rightId = 0;
+                    parent->size--;
+
+                }else if (parent == root){//se a raiz for o nó de cima apaga os filhos e puxa o filho remanescente pra raiz
+                    root = parent -> middle;
+                    delete parent->left;
+                    delete parent->right;
+                    delete parent;
+                }else{//galho morreu sobe a folha
+                    removeInternal(parent->leftId, findParent(root,parent) , parent->middle);
+                }
+            }else if(pos1==1){
+                //substitui o filho da esquerda do parente pelo da direita e puxa a direita pro meio
+                if(parent->size == 2){
+                    parent->middle = parent->right;
+                    parent->right = cursor;
+                    parent-> leftId = parent->rightId;
+                    parent->rightId = 0;
+                    parent->size--;
+
+                }else if(parent == root){//se a raiz for o nó de cima apaga os filhos e puxa o filho remanescente pra raiz
+                    root = parent->left;
+                    delete parent->middle;
+                    delete parent->right;
+                    delete parent;
+
+                }else{// o galho morreu puxa a folha pra cima
+                    removeInternal(parent->leftId, findParent(root,parent) , parent->left);
+                }
+            }else{
+                //remove o filho da direita e deixa o nó da direita vazio como a arvóre está pendendo pra
+                //esquerda só remove o nó da direita porque a arvore é obrigada a ter um nó da esquerda
+                parent->rightId = 0;
+                parent->size--;
+            }
         }
-//        if (rightSibling <= parent->size) {
-//            Node *rightNode = parent->ptr[rightSibling];
-//            if (rightNode->size >= (MAX + 1) / 2 + 1) {
-//                cursor->size++;
-//                cursor->ptr[cursor->size] = cursor->ptr[cursor->size - 1];
-//                cursor->ptr[cursor->size - 1] = NULL;
-//                cursor->key[cursor->size - 1] = rightNode->key[0];
-//                rightNode->size--;
-//                rightNode->ptr[rightNode->size] = rightNode->ptr[rightNode->size + 1];
-//                rightNode->ptr[rightNode->size + 1] = NULL;
-//                for (int i = 0; i < rightNode->size; i++) {
-//                    rightNode->key[i] = rightNode->key[i + 1];
-//                }
-//                parent->key[rightSibling - 1] = rightNode->key[0];
-//                return;
-//            }
-//        }
-//        if (leftSibling >= 0) {
-//            Node *leftNode = parent->ptr[leftSibling];
-//            for (int i = leftNode->size, j = 0; j < cursor->size; i++, j++) {
-//                leftNode->key[i] = cursor->key[j];
-//            }
-//            leftNode->ptr[leftNode->size] = NULL;
-//            leftNode->size += cursor->size;
-//            leftNode->ptr[leftNode->size] = cursor->ptr[cursor->size];
-//            removeInternal(parent->key[leftSibling], parent, cursor);
-//            delete[] cursor->key;
-//            delete[] cursor->ptr;
-//            delete cursor;
-//        } else if (rightSibling <= parent->size) {
-//            Node *rightNode = parent->ptr[rightSibling];
-//            for (int i = cursor->size, j = 0; j < rightNode->size; i++, j++) {
-//                cursor->key[i] = rightNode->key[j];
-//            }
-//            cursor->ptr[cursor->size] = NULL;
-//            cursor->size += rightNode->size;
-//            cursor->ptr[cursor->size] = rightNode->ptr[rightNode->size];
-//            cout << "Merging two leaf nodes\n";
-//            removeInternal(parent->key[rightSibling - 1], parent, rightNode);
-//            delete[] rightNode->key;
-//            delete[] rightNode->ptr;
-//            delete rightNode;
-//        }
     }
 }
 
 
 
-//void BPTree::removeInternal(int x, Node *cursor, Node *child) {
-//    if (cursor == root) {
-//        if (cursor->size == 1) {
-//            if (cursor->ptr[1] == child) {
-//                delete[] child->key;
-//                delete[] child->ptr;
-//                delete child;
-//                root = cursor->ptr[0];
-//                delete[] cursor->key;
-//                delete[] cursor->ptr;
-//                delete cursor;
-//                cout << "Changed root node\n";
-//                return;
-//            } else if (cursor->ptr[0] == child) {
-//                delete[] child->key;
-//                delete[] child->ptr;
-//                delete child;
-//                root = cursor->ptr[1];
-//                delete[] cursor->key;
-//                delete[] cursor->ptr;
-//                delete cursor;
-//                cout << "Changed root node\n";
-//                return;
-//            }
-//        }
-//    }
-//    int pos;
-//    for (pos = 0; pos < cursor->size; pos++) {
-//        if (cursor->key[pos] == x) {
-//            break;
-//        }
-//    }
-//    for (int i = pos; i < cursor->size; i++) {
-//        cursor->key[i] = cursor->key[i + 1];
-//    }
-//    for (pos = 0; pos < cursor->size + 1; pos++) {
-//        if (cursor->ptr[pos] == child) {
-//            break;
-//        }
-//    }
-//    for (int i = pos; i < cursor->size + 1; i++) {
-//        cursor->ptr[i] = cursor->ptr[i + 1];
-//    }
-//    cursor->size--;
-//    if (cursor->size >= (MAX + 1) / 2 - 1) {
-//        return;
-//    }
-//    if (cursor == root)
-//        return;
-//    Node *parent = findParent(root, cursor);
-//    int leftSibling, rightSibling;
-//    for (pos = 0; pos < parent->size + 1; pos++) {
-//        if (parent->ptr[pos] == cursor) {
-//            leftSibling = pos - 1;
-//            rightSibling = pos + 1;
-//            break;
-//        }
-//    }
-//    if (leftSibling >= 0) {
-//        Node *leftNode = parent->ptr[leftSibling];
-//        if (leftNode->size >= (MAX + 1) / 2) {
-//            for (int i = cursor->size; i > 0; i--) {
-//                cursor->key[i] = cursor->key[i - 1];
-//            }
-//            cursor->key[0] = parent->key[leftSibling];
-//            parent->key[leftSibling] = leftNode->key[leftNode->size - 1];
-//            for (int i = cursor->size + 1; i > 0; i--) {
-//                cursor->ptr[i] = cursor->ptr[i - 1];
-//            }
-//            cursor->ptr[0] = leftNode->ptr[leftNode->size];
-//            cursor->size++;
-//            leftNode->size--;
-//            return;
-//        }
-//    }
-//    if (rightSibling <= parent->size) {
-//        Node *rightNode = parent->ptr[rightSibling];
-//        if (rightNode->size >= (MAX + 1) / 2) {
-//            cursor->key[cursor->size] = parent->key[pos];
-//            parent->key[pos] = rightNode->key[0];
-//            for (int i = 0; i < rightNode->size - 1; i++) {
-//                rightNode->key[i] = rightNode->key[i + 1];
-//            }
-//            cursor->ptr[cursor->size + 1] = rightNode->ptr[0];
-//            for (int i = 0; i < rightNode->size; ++i) {
-//                rightNode->ptr[i] = rightNode->ptr[i + 1];
-//            }
-//            cursor->size++;
-//            rightNode->size--;
-//            return;
-//        }
-//    }
-//    if (leftSibling >= 0) {
-//        Node *leftNode = parent->ptr[leftSibling];
-//        leftNode->key[leftNode->size] = parent->key[leftSibling];
-//        for (int i = leftNode->size + 1, j = 0; j < cursor->size; j++) {
-//            leftNode->key[i] = cursor->key[j];
-//        }
-//        for (int i = leftNode->size + 1, j = 0; j < cursor->size + 1; j++) {
-//            leftNode->ptr[i] = cursor->ptr[j];
-//            cursor->ptr[j] = NULL;
-//        }
-//        leftNode->size += cursor->size + 1;
-//        cursor->size = 0;
-//        removeInternal(parent->key[leftSibling], parent, cursor);
-//    } else if (rightSibling <= parent->size) {
-//        Node *rightNode = parent->ptr[rightSibling];
-//        cursor->key[cursor->size] = parent->key[rightSibling - 1];
-//        for (int i = cursor->size + 1, j = 0; j < rightNode->size; j++) {
-//            cursor->key[i] = rightNode->key[j];
-//        }
-//        for (int i = cursor->size + 1, j = 0; j < rightNode->size + 1; j++) {
-//            cursor->ptr[i] = rightNode->ptr[j];
-//            rightNode->ptr[j] = NULL;
-//        }
-//        cursor->size += rightNode->size + 1;
-//        rightNode->size = 0;
-//        removeInternal(parent->key[rightSibling - 1], parent, rightNode);
-//    }
-//}
 
-Node *BpTree::readTree(std::string file) {
+void BpTree::removeInternal(int x, Node *cursor, Node *child) {
+
+    if(cursor->size == 1){//apenas existe um id a esquerda
+        if(x>=cursor->leftId){//verifica se o filho é o da esquerda ou meio que precisa ser realocado
+            if(cursor->left->size == 1){//caso tenha apenas um nó desce o cursor para direita do filho da esquerda
+                cursor->left->rightId = cursor->leftId;
+                cursor->left->right = child;
+                cursor->left->size++;
+                *(cursor) = *(cursor-> left);
+            }else{// divide o galho de baixo em 2 novos galhos
+                cursor->middle->leftId = cursor->leftId;
+                cursor->leftId = cursor->left->rightId;
+                cursor->middle->left = cursor->left->right;
+                cursor->left->right = new Node;
+                cursor->middle->size = 1;
+                cursor->left->size = 1;
+                cursor->middle->middle = child;
+            }
+        }else{//esquerda vazia meio subir
+            if(cursor->middle->size == 1){//caso tenha apenas um nó desce o cursor para esquerda do filho da direita
+                cursor->middle->rightId = cursor->middle->leftId;
+                cursor->middle->right = cursor->middle->middle;
+                cursor->middle->middle = cursor->middle->left;
+                cursor->middle->left = child;
+                cursor->middle->leftId = cursor->leftId;
+                cursor->middle->size++;
+                *(cursor) = *(cursor-> middle);
+            }else{// divide o galho de baixo em 2 novos galhos
+                cursor->left->middle = cursor->middle->left;
+                cursor->left->leftId = cursor->leftId;
+                cursor->left->left = child;
+                cursor->middle->left = cursor->middle->middle;
+                cursor->middle->middle = cursor->middle->right;
+                cursor->leftId = cursor->middle->leftId;
+                cursor->middle->leftId =  cursor->middle->rightId;
+                cursor->middle->rightId = 0;
+                cursor->middle->right = new Node;
+                cursor->middle->size = 1;
+                cursor->left->size = 1;
+            }
+        }
+    }else{
+
+    }
+    if(cursor == root){//se a raiz for o cursor a arvore foi rebalanceada
+        return;
+    }else{// chama a função novamente passando o cursor como filho e pegando o pai dele como cursor
+        removeInternal(x, findParent(root,cursor) , cursor);
+    }
+}
+
+
+Node *BpTree::readTree() {
     std::string line;
     std::string data;
-    Node *root = new Node;
-    std::vector<int>::iterator itr;
-    Node *cursor = root;
+    Node *newRoot = new Node;
+    Node *cursor = newRoot;
     std::map<int,Node*> ft;
-    std::vector<Node*> fathers;
-    std::vector<int> fatherPosition;
     int fatherPos = 0;
     int a=0;
     char delimiter = '|';
-    std::ifstream treeFile;
-    treeFile.open(file);
-    if(treeFile.is_open()){
-        while(!treeFile.eof()){
-            int pos = treeFile.tellg();
+    std::ifstream treeF(treeFile);
+    if(treeF.is_open()){
+        while(!treeF.eof()){
+            int pos = (int)treeF.tellg();
 
-            getline(treeFile,line);
+            getline(treeF,line);
             if(line.size()<5){
                 break;
             }
@@ -576,17 +504,17 @@ Node *BpTree::readTree(std::string file) {
         return nullptr;
     }
     std::cout<< std::endl;
-    treeFile.close();
-    return root;
+    treeF.close();
+    return newRoot;
 
 }
 
 void BpTree::recWrite(Node *cursor,std::ostream &file,char direction,int fatherPos){
     std::string isLeaf;
-    int lptr=0;
-    int rptr=0;
+    int lptr;
+    int rptr;
     if (cursor != nullptr) {
-        int pos = file.tellp();
+        int pos = (int)file.tellp();
         isLeaf = cursor->isLeaf?"true":"false";
         lptr = cursor->isLeaf?ptr[cursor->leftId]:0;
         rptr = cursor->isLeaf?ptr[cursor->rightId]:0;
@@ -599,16 +527,14 @@ void BpTree::recWrite(Node *cursor,std::ostream &file,char direction,int fatherP
     }
 
 }
-void *BpTree::writeTree(std::string file) {
-    std::ofstream treeFile(file);
-    if(treeFile.is_open()){
-        recWrite(root, treeFile ,'.',0);
+void BpTree::writeTree() {
+    std::ofstream treeF(treeFile);
+    if(treeF.is_open()){
+        recWrite(root, treeF , '.', 0);
+        treeF.close();
     }else{
         std::cout << "erro ao abrir o arquivo de arvore" << std::endl;
-        return nullptr;
     }
-
-    treeFile.close();
 }
 
 BpTree::BpTree(std::string nameFile, std::string treeFile, std::string emptyFile, int regSize,bool reset) : nameFile(std::move(nameFile)), treeFile(std::move(treeFile)), emptyFile(std::move(emptyFile)),  regSize(regSize){
@@ -640,12 +566,12 @@ BpTree::BpTree(std::string nameFile, std::string treeFile, std::string emptyFile
         root = new Node;
     }else{
         //se não a arvore é carregada para memória principal
-        this->root = readTree(this->treeFile);
+        this->root = readTree();
         loadEmptyRegister();
     }
 }
 
-int BpTree::getID() {
+int BpTree::getID() const {
     Node *cursor = root;
     while(!cursor->isLeaf){
         cursor = cursor->right;
@@ -654,7 +580,7 @@ int BpTree::getID() {
 }
 
 int BpTree::checkEmptyRegister() {
-    if(emptyReg.size() > 0){
+    if(!emptyReg.empty()){
         std::ofstream emptyF(emptyFile);
         if(emptyF.is_open()) {
             emptyF << emptyReg.size() - 1 << std::endl;
@@ -665,6 +591,9 @@ int BpTree::checkEmptyRegister() {
             int regAddres = emptyReg[0];
             emptyReg.erase(emptyReg.begin());
             return regAddres;
+        }else{
+            std::cout << "Erro ao abrir arquivo de registros" << std::endl;
+            return -1;
         }
     }else{
         return -1;
