@@ -11,7 +11,7 @@
 #include <vector>
 class BpTree {
 
-
+    void removeInternal(int x, Node *cursor, Node *child);
     void insertInternal(int x, Node *cursor, Node *child);
     std::map <int,int> ptr;
     std::vector<int> emptyReg;

@@ -44,12 +44,16 @@ int main() {
          cin >> op;
         switch (op) {
             case 0:
+                cout << "fim do programa" <<endl;
                 return 0;
             case 1:
                 cout << "Digite um nome" << endl;
+
                 cin.clear();
                 fflush(stdin);
                 cin.get(name,REGISTER_SIZE,'\n');
+                cout << "Digite um id" << endl;
+                cin>>id;
                 tree.insert(id,name);
                 tree.print(tree.root);
                 cout << endl <<"Registro adicionado : ID(" << id << ") Nome: " << name;
@@ -78,7 +82,6 @@ int main() {
                 break;
         }
         cout << endl;
-
         system("pause");
         cout << string(50, '\n');
     }
