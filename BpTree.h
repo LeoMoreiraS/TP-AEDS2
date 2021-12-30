@@ -10,37 +10,42 @@
 #include <map>
 #include <vector>
 class BpTree {
-
-    void removeInternal(int x, Node *cursor, Node *child);
-    void insertInternal(int x, Node *cursor, Node *child);
-    std::map <int,int> ptr;
-    std::vector<int> emptyReg;
-public:
-    BpTree(std::string nameFile, std::string treeFile,std::string emptyFile, int regSize,bool reset);
-
 private:
     int regSize;
+    Node *root{};
     std::string nameFile;
     std::string emptyFile;
     std::string treeFile;
-public:
-    int getID() const;
-    int search(int index);
-    Node *root{};
-    void insert(int x,char *name);
-    void print(Node *cursor);
-    int checkEmptyRegister();
-    Node *findParent(Node *cursor, Node *child);
-    Node *readTree();
-    void remove(int x);
+    std::map <int,int> ptr;
+    std::vector<int> emptyReg;
 
+
+    Node *readTree();
     void recWrite(Node *cursor,std::ostream &file,char direction,int fatherPos);
+    //funções para reutilização dos registros vazios
+    int checkEmptyRegister();
+    void loadEmptyRegister();
+    void writeEmptyRegister();
+    //funções para inserção e remoção recursiva de nós
+    Node *findParent(Node *cursor, Node *child);
+    void removeInternal(int x, Node *cursor, Node *child);
+    void insertInternal(int x, Node *cursor, Node *child);
+    //função recursiva da impressão da árvore
+    void printRecursive(Node *cursor);
+
+public:
+    //construtor
+    BpTree(std::string nameFile, std::string treeFile,std::string emptyFile, int regSize,bool reset);
+    //busca de um nó/registro
+    void print();
+    int search(int index);
+    void remove(int x);
+    void insert(int x,char *name);
+
 
     void writeTree();
 
-    void loadEmptyRegister();
-
-    void writeEmptyRegister();
+    int getID() const;
 };
 
 

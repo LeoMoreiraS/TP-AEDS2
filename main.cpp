@@ -55,7 +55,7 @@ int main() {
                 cout << "Digite um id" << endl;
                 cin>>id;
                 tree.insert(id,name);
-                tree.print(tree.root);
+                tree.print();
                 cout << endl <<"Registro adicionado : ID(" << id << ") Nome: " << name;
                 id+=10;
                 break;
@@ -75,7 +75,7 @@ int main() {
                 break;
             case 4:
                 cout << "root ";
-                tree.print(tree.root);
+                tree.print();
                 break;
             default:
                 cout << "Opção invalida" << endl;
