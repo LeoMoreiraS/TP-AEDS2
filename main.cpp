@@ -31,10 +31,9 @@ int main() {
     char name[REGISTER_SIZE];
     cout << "Manter arquivos (0)" << endl << "Reiniciar arquivos (1)" << endl;
     cin >> op;
-    //reiniciar e limpar os arquivos se não carrega os dados da memória
+    //reiniciar e limpar os arquivos se não carrega os dados da memória secundaria
     bool reset = op == 1;
     BpTree tree = BpTree(NAME_FILE,TREE_FILE,EMPT_FILE,REGISTER_SIZE,reset);
-    id = tree.getID();
     cout << endl;
 
     system("pause");
@@ -46,9 +45,9 @@ int main() {
             case 0:
                 cout << "fim do programa" <<endl;
                 return 0;
+
             case 1:
                 cout << "Digite um nome" << endl;
-
                 cin.clear();
                 fflush(stdin);
                 cin.get(name,REGISTER_SIZE,'\n');
@@ -57,8 +56,8 @@ int main() {
                 tree.insert(id,name);
                 tree.print();
                 cout << endl <<"Registro adicionado : ID(" << id << ") Nome: " << name;
-                id+=10;
                 break;
+
             case 2:
                 cout << "Digite um id para buscar um registro" << endl;
                 cin >> x;
@@ -67,19 +66,21 @@ int main() {
                     cout << "Endereco do registro : " << address << endl;
                 }
                 break;
+
             case 3:
                 cout << "Digite um id para remover um registro" << endl;
                 cin >> x;
                 tree.remove(x);
-                tree.writeTree();
                 break;
+
             case 4:
-                cout << "root ";
                 tree.print();
                 break;
+
             default:
                 cout << "Opção invalida" << endl;
                 break;
+
         }
         cout << endl;
         system("pause");

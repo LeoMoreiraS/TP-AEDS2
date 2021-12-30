@@ -51,7 +51,9 @@ int BpTree::search(int index) {
 }
 void BpTree::print(){
     Node *cursor = root;
+
     if (cursor != nullptr) {
+        std::cout << "root ";
         if(!cursor->isLeaf) {
             if(cursor->leftId != 0 || cursor->rightId != 0){
                 std::cout << cursor->leftId << " " << cursor->rightId << " " << std::endl;
@@ -62,7 +64,7 @@ void BpTree::print(){
             printRecursive(cursor->middle);
             std::cout << "  > ";
             printRecursive(cursor->right);
-            std::cout << ") " ;
+            std::cout << ") " << std::endl;
         }else{
             int lptr = cursor->leftId != 0?ptr[cursor->leftId]: 0;
             int rptr = cursor->rightId != 0?ptr[cursor->rightId]: 0;
@@ -480,12 +482,14 @@ Node *BpTree::readTree() {
     int fatherPos = 0;
     int a=0;
     char delimiter = '|';
-    std::ifstream treeF(treeFile);
+    std::ifstream treeF(treeFile,std::ios::in);
     if(treeF.is_open()){
         while(!treeF.eof()){
-            int pos = (int)treeF.tellg();
+
 
             getline(treeF,line);
+            int pos = treeF.tellg();
+            a++;
             if(line.size()<5){
                 break;
             }
@@ -496,7 +500,7 @@ Node *BpTree::readTree() {
                     case 0:
                         cursor->isLeaf = data == "true";
                         if(!cursor->isLeaf){
-                            ft[pos+a]=cursor;
+                            ft[pos-10+a]=cursor;
                         }
                         break;
                     case 1:
@@ -537,7 +541,7 @@ Node *BpTree::readTree() {
 
             }
             cursor = new Node;
-            a++;
+
         }
     }else{
         std::cout << "erro ao abrir o arquivo de arvore" << std::endl;
@@ -554,11 +558,12 @@ void BpTree::recWrite(Node *cursor,std::ostream &file,char direction,int fatherP
     int lptr;
     int rptr;
     if (cursor != nullptr) {
-        int pos = (int)file.tellp();
+
         isLeaf = cursor->isLeaf?"true":"false";
         lptr = cursor->isLeaf?ptr[cursor->leftId]:0;
         rptr = cursor->isLeaf?ptr[cursor->rightId]:0;
         file << isLeaf << '|' <<cursor->leftId << '|' << cursor->rightId << '|' << cursor->size << '|' << fatherPos << '|'<<  lptr << '|'<< rptr << '|' << direction << std::endl;
+        int pos = (int)file.tellp();
         if(!cursor->isLeaf) {
             recWrite(cursor->left,file,'<',pos);
             recWrite(cursor->middle,file,'=',pos);
